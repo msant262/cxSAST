@@ -1,19 +1,24 @@
-export interface ScanResult {
-  id: string;
-  filePath: string;
-  lineNumber: number;
-  vulnerabilityType: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export interface Vulnerability {
+  type: string;
+  severity: string;
+  line: number;
   description: string;
-  codeSnippet: string;
-  ruleId: string;
+}
+
+export interface ScanResult {
+  file_name: string;
+  vulnerabilities: Vulnerability[];
+  severity: string;
+  line_number: number;
+  description: string;
 }
 
 export interface ScanConfig {
   sourceType: 'GIT' | 'LOCAL';
   sourcePath: string;
+  projectName: string;
   excludePaths: string[];
-  rules: Rule[];
+  rules: string[];
 }
 
 export interface Rule {

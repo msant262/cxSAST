@@ -1,0 +1,37 @@
+{
+    "buffer_overflow": {
+        "patterns": [
+            "strcpy",
+            "strcat",
+            "gets",
+            "sprintf"
+        ],
+        "context": {
+            "buffer_size_check": false,
+            "input_validation": false
+        }
+    },
+    "command_injection": {
+        "patterns": [
+            "system",
+            "exec",
+            "popen",
+            "execl"
+        ],
+        "context": {
+            "input_sanitization": false,
+            "shell_metacharacters": true
+        }
+    },
+    "sql_injection": {
+        "patterns": [
+            "execute",
+            "query",
+            "raw_query"
+        ],
+        "context": {
+            "parameterized": false,
+            "input_validation": false
+        }
+    }
+} 

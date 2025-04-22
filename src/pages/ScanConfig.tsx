@@ -2,84 +2,105 @@ import React, { useState } from 'react';
 import {
   Box,
   Button,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Typography,
-  Paper,
-  Grid,
+  Card,
+  CardContent,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
-import { ScanConfig } from '../types';
+import { Upload as UploadIcon } from '@mui/icons-material';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const ScanConfigPage: React.FC = () => {
-  const [config, setConfig] = useState<ScanConfig>({
-    sourceType: 'LOCAL',
-    sourcePath: '',
-    excludePaths: [],
-    rules: [],
-  });
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement scan start logic
-    console.log('Starting scan with config:', config);
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    const file = event.target.files?.[0];
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
+
+    console.log('Starting file upload:', file.name);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      console.log('Sending request to backend...');
+      const response = await axios.post('http://localhost:8000/api/scan', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      console.log('Response received:', response.data);
+      
+      if (!response.data || !response.data.scanId) {
+        throw new Error('Invalid response from server: missing scanId');
+      }
+      
+      const scanId = response.data.scanId;
+      console.log('Navigating to scan status with ID:', scanId);
+      navigate(`/scan-status/${scanId}`, { replace: true });
+      
+    } catch (err) {
+      console.error('Error during file upload:', err);
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.detail || 'Failed to upload file';
+        console.error('Axios error:', errorMessage);
+        setError(errorMessage);
+      } else {
+        console.error('Unknown error:', err);
+        setError('Failed to upload file');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Configure Scan
+    <Box sx={{ p: 3, maxWidth: 600, margin: '0 auto' }}>
+      <Typography variant="h4" gutterBottom align="center">
+        Upload ZIP File
       </Typography>
-      <Paper sx={{ p: 3 }}>
-        <form onSubmit={handleSubmit}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Source Type</InputLabel>
-                <Select
-                  value={config.sourceType}
-                  onChange={(e) => setConfig({ ...config, sourceType: e.target.value as 'GIT' | 'LOCAL' })}
-                  label="Source Type"
-                >
-                  <MenuItem value="LOCAL">Local Files</MenuItem>
-                  <MenuItem value="GIT">Git Repository</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Source Path"
-                value={config.sourcePath}
-                onChange={(e) => setConfig({ ...config, sourcePath: e.target.value })}
-                helperText={config.sourceType === 'GIT' ? 'Git repository URL' : 'Local directory path'}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Exclude Paths"
-                value={config.excludePaths.join(',')}
-                onChange={(e) => setConfig({ ...config, excludePaths: e.target.value.split(',') })}
-                helperText="Comma-separated list of paths to exclude from scan"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
-              >
-                Start Scan
-              </Button>
-            </Grid>
-          </Grid>
-        </form>
-      </Paper>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Card>
+        <CardContent sx={{ textAlign: 'center' }}>
+          <input
+            type="file"
+            accept=".zip"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            id="file-input"
+            disabled={loading}
+          />
+          <label htmlFor="file-input">
+            <Button
+              variant="contained"
+              component="span"
+              startIcon={loading ? <CircularProgress size={20} /> : <UploadIcon />}
+              disabled={loading}
+              sx={{ mt: 2 }}
+            >
+              {loading ? 'Uploading...' : 'Select ZIP File'}
+            </Button>
+          </label>
+        </CardContent>
+      </Card>
     </Box>
   );
 };
